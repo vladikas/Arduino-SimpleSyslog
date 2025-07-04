@@ -1,6 +1,7 @@
 # Arduino SimpleSyslog
 
 Easily add remote syslog capabilities to your ESP32/ESP8266 projects.
+Add support for flash-based strings using F() macro
 
 ## Installation
 
