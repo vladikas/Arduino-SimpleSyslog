@@ -7,15 +7,19 @@
 #endif
 
 // Hostname and AppName are sent in the syslog packet
-SimpleSyslog syslog("YourHostname", "YourAppName", "192.168.5.222");
+SimpleSyslog syslog;
 
 void setup() {
 	Serial.begin(115200);
 
-	int ok = init_wifi("YourSSID", "Password");
+	syslog.setHostname("YourHostname");
+	syslog.setApp("YourAppName");
+	syslog.setServer("192.168.5.222", 514);
+	
+	init_wifi("YourSSID", "Password");
 
 	// Send a LOCAL7.INFO level syslog message
-	syslog.printf(FAC_LOCAL7, PRI_INFO, "Connected to WiFi!");
+	syslog.printf(FAC_LOCAL7, PRI_INFO, F("Connected to WiFi!"));
 
 	// Note:
 	// FAC_USER, and FAC_LOCAL0 through FAC_LOCAL7 are valid facilities
@@ -24,7 +28,11 @@ void setup() {
 
 void loop() {
 	// Send a USER.WARNING level syslog message
-	syslog.printf(FAC_USER, PRI_WARNING, "Looping around... Uptime: %0.1f minutes", millis() / (float)60000);
+	if (WiFi.status() == WL_CONNECTED) {
+		syslog.printf(FAC_USER, PRI_WARNING, F("Looping around... Uptime: %0.1f minutes"), millis() / 60000.0f);
+	} else {
+		Serial.println("WiFi not connected, cannot send syslog");
+	}
 
 	delay(20000);
 }

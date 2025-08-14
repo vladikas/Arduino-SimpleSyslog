@@ -1,7 +1,7 @@
 #ifndef SIMPLE_SYSLOG_H
 #define SIMPLE_SYSLOG_H
 
-#define SIMPLE_SYSLOG_VERSION "0.1.3"
+#define SIMPLE_SYSLOG_VERSION "0.1.7"
 
 #if defined (ESP8266)
   #include <ESP8266WiFi.h>
@@ -39,17 +39,38 @@ class SimpleSyslog {
   WiFiUDP SimpleSyslog_udp;
 
 public:
-  SimpleSyslog(const char* hostname, const char* app, const char* server, uint16_t port = 514, uint16_t max_packet_size = 128) {
-	this->_hostname        = hostname;
-	this->_app             = app;
-	this->_server          = server;
-	this->_port            = port;
-	this->_max_packet_size = max_packet_size;
+  // Конструктор по умолчанию
+  SimpleSyslog()
+    : _hostname(nullptr), _app(nullptr), _server(nullptr),
+      _port(514), _max_packet_size(128) {}
 
+  // Полная инициализация
+  void begin(const char* hostname, const char* app, const char* server,
+             uint16_t port = 514, uint16_t max_packet_size = 128) {
+    _hostname = hostname;
+    _app = app;
+    _server = server;
+    _port = port;
+    _max_packet_size = max_packet_size;
   }
 
-  // strings from RAM
+  // Сеттеры
+  void setHostname(const char* hostname) { _hostname = hostname; }
+  void setApp(const char* app) { _app = app; }
+  void setServer(const char* server, uint16_t port = 514) {
+    _server = server;
+    _port = port;
+  }
+
+  // Проверка готовности к отправке
+  bool isReady() const {
+    return _hostname && _app && _server && (WiFi.status() == WL_CONNECTED);
+  }
+
+  // printf для строк из RAM
   void printf(uint8_t facility, uint8_t severity, const char* format, ...) {
+    if (!isReady()) return;
+
     uint8_t priority = (8 * facility) + severity;
 
     va_list args;
@@ -58,16 +79,13 @@ public:
     vsnprintf(buf, _max_packet_size, format, args);
     va_end(args);
 
-    uint8_t buffer[_max_packet_size];
-    int len = snprintf((char*)buffer, _max_packet_size, "<%d>%s %s: %s", priority, _hostname, _app, buf);
-
-    SimpleSyslog_udp.beginPacket(_server, _port);
-    SimpleSyslog_udp.write(buffer, len);
-    SimpleSyslog_udp.endPacket();
+    sendPacket(priority, buf);
   }
 
-  // strings from F()
+  // printf для строк из F()
   void printf(uint8_t facility, uint8_t severity, const __FlashStringHelper* format, ...) {
+    if (!isReady()) return;
+
     uint8_t priority = (8 * facility) + severity;
 
     va_list args;
@@ -76,12 +94,7 @@ public:
     vsnprintf_P(buf, _max_packet_size, (PGM_P)format, args);
     va_end(args);
 
-    uint8_t buffer[_max_packet_size];
-    int len = snprintf((char*)buffer, _max_packet_size, "<%d>%s %s: %s", priority, _hostname, _app, buf);
-
-    SimpleSyslog_udp.beginPacket(_server, _port);
-    SimpleSyslog_udp.write(buffer, len);
-    SimpleSyslog_udp.endPacket();
+    sendPacket(priority, buf);
   }
 
 private:
@@ -90,6 +103,16 @@ private:
   const char* _server;
   uint16_t _port;
   uint16_t _max_packet_size;
+
+  void sendPacket(uint8_t priority, const char* message) {
+    uint8_t buffer[_max_packet_size];
+    int len = snprintf((char*)buffer, _max_packet_size, "<%d>%s %s: %s",
+                       priority, _hostname, _app, message);
+
+    SimpleSyslog_udp.beginPacket(_server, _port);
+    SimpleSyslog_udp.write(buffer, len);
+    SimpleSyslog_udp.endPacket();
+  }
 };
 
 #endif
