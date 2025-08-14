@@ -2,40 +2,69 @@
 
 Easily add remote syslog capabilities to your ESP32/ESP8266 projects.
 
-Add support for flash-based strings using F() macro
-
 ## Installation
 
 Clone this repo to your Arduino libraries directory. On Linux this is `~/Arduino/libraries/`.
-Alternately you can just drop `SimpleSyslog.h` in the same directory as your `.ino`
-script.
+Alternately you can just drop `SimpleSyslog.h` in the same directory as your `.ino` script.
 
 ## Usage
 
-Include the SimpleSyslog library and create a global `syslog` object with your environment settings:
+Include the SimpleSyslog library and create a global `syslog` object.
 
-```C++
+### Using the default constructor + `begin()`
+
+```cpp
 #include <SimpleSyslog.h>
 
+SimpleSyslog syslog;
+
+void setup() {
+  syslog.begin("ArduinoHostname", "ArduinoApp", "192.168.5.222");
+}
+```
+
+### Using constructor with parameters
+
+```cpp
 SimpleSyslog syslog("ArduinoHostname", "ArduinoApp", "192.168.5.222");
 ```
-Optional settings are port (default: 514) and maximum packet size (default: 128). To use port 5140 with a packet size of 400:
-```
+
+Optional settings are port (default: 514) and maximum packet size (default: 128).
+
+```cpp
 SimpleSyslog syslog("ArduinoHostname", "ArduinoApp", "192.168.5.222", 5140, 400);
 ```
 
+### Setters (change parameters on the fly)
 
-Send a syslog message:
-
-```C++
-// Simple string syntax
-syslog.printf(FAC_LOCAL7, PRI_INFO, "This is a simple LOCAL7.INFO syslog packet");
-
-// Advanced printf() syntax supported also
-syslog.printf(FAC_USER, PRI_DEBUG, "Uptime: %s", millis());
+```cpp
+syslog.setHostname("ESP8266");
+syslog.setApp("PumpCtrl");
+syslog.setServer("192.168.1.200", 1514);
 ```
 
-Valid facilities:
+### Checking readiness
+
+```cpp
+if (syslog.isReady()) {
+    syslog.printf(FAC_LOCAL0, PRI_INFO, "Ready to send syslog messages");
+}
+```
+
+### Sending syslog messages
+
+Supports both RAM strings and flash strings using `F()`:
+
+```cpp
+// RAM string
+syslog.printf(FAC_LOCAL7, PRI_INFO, "This is a simple LOCAL7.INFO syslog packet");
+
+// Flash string
+syslog.printf(FAC_USER, PRI_DEBUG, F("Uptime: %0.1f minutes"), millis() / 60000.0f);
+```
+
+### Valid facilities:
+
 * `FAC_USER`
 * `FAC_LOCAL0`
 * `FAC_LOCAL1`
@@ -46,7 +75,8 @@ Valid facilities:
 * `FAC_LOCAL6`
 * `FAC_LOCAL7`
 
-Valid severities:
+### Valid severities:
+
 * `PRI_EMERGENCY`
 * `PRI_ALERT`
 * `PRI_CRITICAL`
@@ -58,8 +88,7 @@ Valid severities:
 
 ## Configuring `rsyslog` to receive messages
 
-You will need to configure your `/etc/rsyslog.conf` to accept incoming UDP syslog
-messages. Add these lines to your config and restart `rsyslog`
+You will need to configure your `/etc/rsyslog.conf` to accept incoming UDP syslog messages. Add these lines to your config and restart `rsyslog`:
 
 ```
 $ModLoad imudp
@@ -81,3 +110,13 @@ if ($syslogfacility-text == "local7" or $syslogfacility-text == "user") then {
 ## Based on
 
 Borrowed from [jerryr/EspSyslog](https://github.com/jerryr/EspSyslog) and improved upon.
+
+## New Features in v0.1.7
+
+* Supports flash-based strings using the F() macro.
+* **Default Constructor**: allows global object declaration without parameters.
+* **`begin()` Method**: full initialization after object creation.
+* **Setters**: change hostname, app, server, and port on the fly.
+* **`isReady()` Method**: ensures hostname, app, server are set and Wi-Fi is connected before sending.
+* **Safe `printf()` Methods**: supports both RAM and flash strings (`F()`), automatically checks Wi-Fi readiness.
+* **Internal `sendPacket()` Function**: centralizes UDP packet sending and avoids code duplication.
