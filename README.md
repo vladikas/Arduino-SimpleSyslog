@@ -113,7 +113,6 @@ Borrowed from [jerryr/EspSyslog](https://github.com/jerryr/EspSyslog) and improv
 
 ## New Features in v0.1.7
 
-* Supports flash-based strings using the F() macro.
 * **Default Constructor**: allows global object declaration without parameters.
 * **`begin()` Method**: full initialization after object creation.
 * **Setters**: change hostname, app, server, and port on the fly.
