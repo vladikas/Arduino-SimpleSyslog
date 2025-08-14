@@ -16,7 +16,7 @@ void setup() {
 	syslog.setApp("YourAppName");
 	syslog.setServer("192.168.5.222", 514);
 	
-	init_wifi("YourSSID", "Password");
+	int ok = init_wifi("YourSSID", "Password");
 
 	// Send a LOCAL7.INFO level syslog message
 	syslog.printf(FAC_LOCAL7, PRI_INFO, F("Connected to WiFi!"));
